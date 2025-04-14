@@ -156,7 +156,8 @@ let primitive ppf = function
       fprintf ppf "makeblock %i%a" tag block_shape shape
   | Pmakeblock(tag, Mutable, shape) ->
       fprintf ppf "makemutable %i%a" tag block_shape shape
-  | Pfield n -> fprintf ppf "field %i" n
+  | Pfield (n, Immutable) -> fprintf ppf "field %i" n
+  | Pfield (n, Mutable) -> fprintf ppf "field_mut %i" n
   | Pfield_computed -> fprintf ppf "field_computed"
   | Psetfield(n, ptr, init) ->
       let instr =
@@ -564,12 +565,12 @@ let rec lam ppf = function
       let switch ppf sw =
         let spc = ref false in
         List.iter
-         (fun (n, l) ->
+         (fun (n, _a, l) ->
            if !spc then fprintf ppf "@ " else spc := true;
            fprintf ppf "@[<hv 1>case int %i:@ %a@]" n lam l)
          sw.sw_consts;
         List.iter
-          (fun (n, l) ->
+          (fun (n, _a, l) ->
             if !spc then fprintf ppf "@ " else spc := true;
             fprintf ppf "@[<hv 1>case tag %i:@ %a@]" n lam l)
           sw.sw_blocks ;

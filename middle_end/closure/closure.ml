@@ -1102,7 +1102,7 @@ let rec close ({ backend; fenv; cenv ; mutable_vars } as env) lam =
       let dbg = Debuginfo.from_location loc in
       check_constant_result (getglobal dbg id)
                             (Compilenv.global_approx id)
-  | Lprim(Pfield n, [lam], loc) ->
+  | Lprim(Pfield (n, _), [lam], loc) ->
       let (ulam, approx) = close env lam in
       let dbg = Debuginfo.from_location loc in
       check_constant_result (Uprim(P.Pfield n, [ulam], dbg))
@@ -1406,7 +1406,7 @@ and close_switch env cases num_keys default =
   end ;
   (* Then all other cases *)
   List.iter
-    (fun (key,lam) ->
+    (fun (key,_,lam) ->
      index.(key) <- store.act_store () lam)
     cases ;
 

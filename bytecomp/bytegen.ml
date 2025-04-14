@@ -391,7 +391,7 @@ let comp_primitive p args =
   | Pcompare_ints -> Kccall("caml_int_compare", 2)
   | Pcompare_floats -> Kccall("caml_float_compare", 2)
   | Pcompare_bints bi -> comp_bint_primitive bi "compare" args
-  | Pfield n -> Kgetfield n
+  | Pfield (n, _) -> Kgetfield n
   | Pfield_computed -> Kgetvectitem
   | Psetfield(n, _ptr, _init) -> Ksetfield n
   | Psetfield_computed(_ptr, _init) -> Ksetvectitem
@@ -885,9 +885,9 @@ let rec comp_expr env exp sz cont =
       | None      -> ()
       end ;
       List.iter
-        (fun (n, act) -> act_consts.(n) <- store.act_store () act) sw.sw_consts;
+        (fun (n, _, act) -> act_consts.(n) <- store.act_store () act) sw.sw_consts;
       List.iter
-        (fun (n, act) -> act_blocks.(n) <- store.act_store () act) sw.sw_blocks;
+        (fun (n, _, act) -> act_blocks.(n) <- store.act_store () act) sw.sw_blocks;
 (* Compile and label actions *)
       let acts = store.act_get () in
 (*

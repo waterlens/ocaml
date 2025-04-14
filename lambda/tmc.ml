@@ -570,6 +570,19 @@ let declare_binding ctx (var, def) =
   let cand = { arity; dps_id; direct_kind; } in
   { specialized = Ident.Map.add var cand ctx.specialized }
 
+let rec split3 = function
+    [] -> ([], [], [])
+  | (x,y,z)::l ->
+      let (rx, ry, rz) = split3 l in (x::rx, y::ry, z::rz)
+
+
+let rec combine3 l1 l2 l3 =
+  match (l1, l2, l3) with
+    ([], [], []) -> []
+  | (a1::l1, a2::l2, a3::l3) -> (a1, a2, a3) :: combine3 l1 l2 l3
+  | (_, _, _) -> invalid_arg "List.combine"
+
+
 let rec choice ctx t =
   let rec choice ctx ~tail t =
     match t with
@@ -614,16 +627,16 @@ let rec choice ctx t =
         Lletrec(bindings, body)
     | Lswitch (l1, sw, loc) ->
         (* decompose *)
-        let consts_lhs, consts_rhs = List.split sw.sw_consts in
-        let blocks_lhs, blocks_rhs = List.split sw.sw_blocks in
+        let consts_lhs, consts_arity, consts_rhs = split3 sw.sw_consts in
+        let blocks_lhs, blocks_arity, blocks_rhs = split3 sw.sw_blocks in
         (* transform *)
         let l1 = traverse ctx l1 in
         let+ consts_rhs = choice_list ctx ~tail consts_rhs
         and+ blocks_rhs = choice_list ctx ~tail blocks_rhs
         and+ sw_failaction = choice_option ctx ~tail sw.sw_failaction in
         (* rebuild *)
-        let sw_consts = List.combine consts_lhs consts_rhs in
-        let sw_blocks = List.combine blocks_lhs blocks_rhs in
+        let sw_consts = combine3 consts_lhs consts_arity consts_rhs in
+        let sw_blocks = combine3 blocks_lhs blocks_arity blocks_rhs in
         let sw = { sw with sw_consts; sw_blocks; sw_failaction; } in
         Lswitch (l1, sw, loc)
     | Lstringswitch (l1, cases, fail, loc) ->
