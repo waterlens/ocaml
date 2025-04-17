@@ -1406,7 +1406,7 @@ and close_switch env cases num_keys default =
   end ;
   (* Then all other cases *)
   List.iter
-    (fun (key,lam) ->
+    (fun (key,_,lam) ->
      index.(key) <- store.act_store () lam)
     cases ;
 

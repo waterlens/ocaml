@@ -321,9 +321,9 @@ and lambda_apply =
 
 and lambda_switch =
   { sw_numconsts: int;
-    sw_consts: (int * lambda) list;
+    sw_consts: (int * int * lambda) list;
     sw_numblocks: int;
-    sw_blocks: (int * lambda) list;
+    sw_blocks: (int * int * lambda) list;
     sw_failaction : lambda option}
 
 and lambda_event =
@@ -454,8 +454,8 @@ let make_key e =
 
   and tr_sw env sw =
     { sw with
-      sw_consts = List.map (fun (i,e) -> i,tr_rec env e) sw.sw_consts ;
-      sw_blocks = List.map (fun (i,e) -> i,tr_rec env e) sw.sw_blocks ;
+      sw_consts = List.map (fun (i,a,e) -> i,a,tr_rec env e) sw.sw_consts ;
+      sw_blocks = List.map (fun (i,a,e) -> i,a,tr_rec env e) sw.sw_blocks ;
       sw_failaction = tr_opt env sw.sw_failaction ; }
 
   and tr_opt env = function
@@ -512,8 +512,8 @@ let shallow_iter ~tail ~non_tail:f = function
       List.iter f args
   | Lswitch(arg, sw,_) ->
       f arg;
-      List.iter (fun (_key, case) -> tail case) sw.sw_consts;
-      List.iter (fun (_key, case) -> tail case) sw.sw_blocks;
+      List.iter (fun (_key, _arity, case) -> tail case) sw.sw_consts;
+      List.iter (fun (_key, _arity, case) -> tail case) sw.sw_blocks;
       iter_opt tail sw.sw_failaction
   | Lstringswitch (arg,cases,default,_) ->
       f arg ;
@@ -568,8 +568,8 @@ let rec free_variables = function
       let set =
         free_variables_list
           (free_variables_list (free_variables arg)
-             (List.map snd sw.sw_consts))
-          (List.map snd sw.sw_blocks)
+             (List.map (fun (_, _, act) -> act) sw.sw_consts))
+          (List.map (fun (_, _, act) -> act) sw.sw_blocks)
       in
       begin match sw.sw_failaction with
       | None -> set
@@ -819,7 +819,7 @@ let subst update_env ?(freshen_bound_variables = false) s input_lam =
         Lifused (id, subst s l e)
   and subst_list s l li = List.map (subst s l) li
   and subst_decl s l (id, exp) = (id, subst s l exp)
-  and subst_case s l (key, case) = (key, subst s l case)
+  and subst_case s l (key, arity, case) = (key, arity, subst s l case)
   and subst_strcase s l (key, case) = (key, subst s l case)
   and subst_opt s l = function
     | None -> None
@@ -869,9 +869,9 @@ let shallow_map f = function
   | Lswitch (e, sw, loc) ->
       Lswitch (f e,
                { sw_numconsts = sw.sw_numconsts;
-                 sw_consts = List.map (fun (n, e) -> (n, f e)) sw.sw_consts;
+                 sw_consts = List.map (fun (n, a, e) -> (n, a, f e)) sw.sw_consts;
                  sw_numblocks = sw.sw_numblocks;
-                 sw_blocks = List.map (fun (n, e) -> (n, f e)) sw.sw_blocks;
+                 sw_blocks = List.map (fun (n, a, e) -> (n, a, f e)) sw.sw_blocks;
                  sw_failaction = Option.map f sw.sw_failaction;
                },
                loc)

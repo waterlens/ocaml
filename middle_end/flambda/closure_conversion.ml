@@ -476,14 +476,14 @@ let rec close t env (lam : Lambda.lambda) : Flambda.t =
           ~name:(Names.of_primitive lambda_p))
   | Lswitch (arg, sw, _loc) ->
     let scrutinee = Variable.create Names.switch in
-    let aux (i, lam) = i, close t env lam in
+    let aux (i, _a, lam) = i, close t env lam in
     let nums sw_num cases default =
       let module I = Numbers.Int in
       match default with
       | Some _ ->
           I.zero_to_n (sw_num - 1)
       | None ->
-          List.fold_left (fun set (i, _) -> I.Set.add i set) I.Set.empty cases
+          List.fold_left (fun set (i, _, _) -> I.Set.add i set) I.Set.empty cases
     in
     Flambda.create_let scrutinee (Expr (close t env arg))
       (Switch (scrutinee,
