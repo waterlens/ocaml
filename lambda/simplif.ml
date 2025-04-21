@@ -947,8 +947,11 @@ let reuse_immutable_block lam =
         | Some (hd :: _) -> Lvar hd
         | _ -> lam
       end
-    | Lprim (Pmakeblock (id, Immutable, _shape), 
-             (Lprim ((Pfield (0, Immutable)), [Lvar v], _loc)) :: xs, _loc2) ->
+    | Lprim (Pmakeblock (id, Immutable, _shape) as prim, 
+             ((Lprim ((Pfield (0, Immutable)), [Lvar v], _loc)) :: xs as args), loc) ->
+      let failed () =
+        Lprim (prim, List.map (reuse ~ctx) args, loc)
+      in
       begin match Ident.Map.find_opt v ctx.known_tag_of_var with
         | Some (tag, arity) when tag = id && (List.length xs + 1) = arity ->
           let arg_cond (flag, i) arg =
@@ -958,8 +961,8 @@ let reuse_immutable_block lam =
             | _ -> (false, i + 1)
           in
           let (args_satified, _) = List.fold_left arg_cond (true, 1) xs in
-          if args_satified then Lvar v else lam
-        | _ -> lam
+          if args_satified then Lvar v else failed ()
+        | _ -> failed ()
       end
     | Lprim (prim, args, loc) ->
       Lprim (prim, List.map (reuse ~ctx) args, loc)
