@@ -1,11 +1,11 @@
 File "w73.ml", line 30, characters 23-42:
-30 |   | Full data -> MFull ({ data } [@share]) (* not ok, warned *)
+30 |   | Full data -> MFull ({ data } [@share]) (* warned, not shared *)
                             ^^^^^^^^^^^^^^^^^^^
 Warning 73 [share-immutable-block-failed]: Immutable block sharing failed
 because the tag didn't match, or the new block contains mutable fields,
 or the arguments were not all immutable fields of the original block.
 File "w73.ml", line 26, characters 18-32:
-26 |   | MFull data -> Full data.data [@share] (* not ok, not shared *)
+26 |   | MFull data -> Full data.data [@share] (* warned, not shared *)
                        ^^^^^^^^^^^^^^
 Warning 73 [share-immutable-block-failed]: Immutable block sharing failed
 because the tag didn't match, or the new block contains mutable fields,

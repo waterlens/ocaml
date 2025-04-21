@@ -28,11 +28,11 @@ let non_op = function
 
 let to_immut = function
   | MEmpty dummy -> Empty dummy [@share] (* ok, shared *)
-  | MFull data -> Full data.data [@share] (* not ok, not shared *)
+  | MFull data -> Full data.data [@share] (* warned, not shared *)
 
 let to_mut = function
   | Empty dummy -> MEmpty dummy [@share] (* ok, shared *)
-  | Full data -> MFull ({ data } [@share]) (* not ok, warned *)
+  | Full data -> MFull ({ data } [@share]) (* warned, not shared *)
 
 let to_mut_wrongly_annotated = function
   | Empty dummy -> MEmpty dummy [@share] (* ok, shared *)
