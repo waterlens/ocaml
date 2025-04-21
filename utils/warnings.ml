@@ -107,6 +107,7 @@ type t =
   | Missing_mli                             (* 70 *)
   | Unused_tmc_attribute                    (* 71 *)
   | Tmc_breaks_tailcall                     (* 72 *)
+  | Share_immutable_block_failed            (* 73 *)
 ;;
 
 (* If you remove a warning, leave a hole in the numbering.  NEVER change
@@ -189,9 +190,10 @@ let number = function
   | Missing_mli -> 70
   | Unused_tmc_attribute -> 71
   | Tmc_breaks_tailcall -> 72
+  | Share_immutable_block_failed -> 73
 ;;
 
-let last_warning_number = 72
+let last_warning_number = 73
 ;;
 
 type description =
@@ -446,6 +448,9 @@ let descriptions = [
     names = ["tmc-breaks-tailcall"];
     description = "A tail call is turned into a non-tail call \
                    by the @tail_mod_cons transformation." };
+  { number = 73;
+    names = ["share-immutable-block-failed"];
+    description = "Share immutable block failed." };
 ]
 ;;
 
@@ -1045,6 +1050,10 @@ let message = function
        Please either mark the called function with the [@tail_mod_cons]\n\
        attribute, or mark this call with the [@tailcall false] attribute\n\
        to make its non-tailness explicit."
+  | Share_immutable_block_failed ->
+      "Immutable block sharing failed\n\
+       because the tag didn't match, or the new block contains mutable fields,\n\
+       or the arguments were not all immutable fields of the original block."
 ;;
 
 let nerrors = ref 0;;

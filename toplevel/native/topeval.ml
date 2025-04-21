@@ -53,7 +53,6 @@ let close_phrase lam =
   Ident.Set.fold (fun id l ->
     let glb, pos = toplevel_value id in
     let glob =
-      (* TODO: check this *)
       Lprim (Pfield (pos, Mutable),
              [Lprim (Pgetglobal glb, [], Loc_unknown)],
              Loc_unknown)

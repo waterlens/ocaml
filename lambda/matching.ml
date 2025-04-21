@@ -3442,7 +3442,7 @@ let failure_handler ~scopes loc ~failer () =
     Lprim
       ( Praise Raise_regular,
         [ Lprim
-            ( Pmakeblock (0, Immutable, None),
+            ( Pmakeblock (0, Immutable, Default_share_immutable, None),
               [ slot;
                 Lconst
                   (Const_block
@@ -3761,7 +3761,7 @@ let do_for_multiple_match ~scopes loc paraml pat_act_list partial =
   let repr = None in
   let arg =
     let sloc = Scoped_location.of_location ~scopes loc in
-    Lprim (Pmakeblock (0, Immutable, None), paraml, sloc) in
+    Lprim (Pmakeblock (0, Immutable, Default_share_immutable, None), paraml, sloc) in
   let handler =
     let partial = check_partial pat_act_list partial in
     let rows = map_on_rows (fun p -> (p, [])) pat_act_list in

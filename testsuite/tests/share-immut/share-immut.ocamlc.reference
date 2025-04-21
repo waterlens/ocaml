@@ -1,0 +1,38 @@
+(setglobal Share-immut!
+  (let
+    (non_op/274 =
+       (function param/278
+         (switch* param/278 case tag 0: param/278
+                            case tag 1: param/278))
+     to_immut/279 =
+       (function param/283
+         (switch* param/283
+          case tag 0: param/283
+          case tag 1: (makeblock 1 share(always) (field_mut 0 param/283))))
+     to_mut/284 =
+       (function param/288
+         (switch* param/288
+          case tag 0: param/288
+          case tag 1: (makemutable 1 share(always) (field 0 param/288))))
+     to_mut_wrongly_annotated/289 =
+       (function param/293
+         (switch* param/293
+          case tag 0: param/293
+          case tag 1: (makemutable 1 (field 0 param/293))))
+     to_immut_with_hint/294 =
+       (function param/298
+         (switch* param/298
+          case tag 0: param/298
+          case tag 1: (makeblock 1 share(hint) (field_mut 0 param/298))))
+     non_op_with_never/299 =
+       (function param/303
+         (switch* param/303
+          case tag 0: (makeblock 0 (int) (field 0 param/303))
+          case tag 1: (makeblock 1 (field 0 param/303))))
+     non_op_with_always/304 =
+       (function param/308
+         (switch* param/308 case tag 0: param/308
+                            case tag 1: param/308)))
+    (makeblock 0 non_op/274 to_immut/279 to_mut/284
+      to_mut_wrongly_annotated/289 to_immut_with_hint/294
+      non_op_with_never/299 non_op_with_always/304)))

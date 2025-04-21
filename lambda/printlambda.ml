@@ -146,16 +146,21 @@ let float_comparison ppf = function
   | CFge -> fprintf ppf ">=."
   | CFnge -> fprintf ppf "!>=."
 
+let share_immutable_attribute ppf = function
+  | Default_share_immutable -> ()
+  | Always_share_immutable -> fprintf ppf " share(always)"
+  | Hint_share_immutable -> fprintf ppf " share(hint)"
+
 let primitive ppf = function
   | Pbytes_to_string -> fprintf ppf "bytes_to_string"
   | Pbytes_of_string -> fprintf ppf "bytes_of_string"
   | Pignore -> fprintf ppf "ignore"
   | Pgetglobal id -> fprintf ppf "global %a" Ident.print id
   | Psetglobal id -> fprintf ppf "setglobal %a" Ident.print id
-  | Pmakeblock(tag, Immutable, shape) ->
-      fprintf ppf "makeblock %i%a" tag block_shape shape
-  | Pmakeblock(tag, Mutable, shape) ->
-      fprintf ppf "makemutable %i%a" tag block_shape shape
+  | Pmakeblock(tag, Immutable, si, shape) ->
+      fprintf ppf "makeblock %i%a%a" tag block_shape shape share_immutable_attribute si
+  | Pmakeblock(tag, Mutable, si, shape) ->
+      fprintf ppf "makemutable %i%a%a" tag block_shape shape share_immutable_attribute si
   | Pfield (n, Immutable) -> fprintf ppf "field %i" n
   | Pfield (n, Mutable) -> fprintf ppf "field_mut %i" n
   | Pfield_computed -> fprintf ppf "field_computed"

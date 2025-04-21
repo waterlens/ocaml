@@ -62,7 +62,7 @@ let transl_extension_constructor ~scopes env path ext =
   let loc = of_location ~scopes ext.ext_loc in
   match ext.ext_kind with
     Text_decl _ ->
-      Lprim (Pmakeblock (Obj.object_tag, Immutable, None),
+      Lprim (Pmakeblock (Obj.object_tag, Immutable, Default_share_immutable, None),
         [Lconst (Const_base (Const_string (name, ext.ext_loc, None)));
          Lprim (prim_fresh_oo_id, [Lconst (const_int 0)], loc)],
         loc)
@@ -197,7 +197,7 @@ let assert_failed ~scopes exp =
   in
   let loc = of_location ~scopes exp.exp_loc in
   Lprim(Praise Raise_regular, [event_after ~scopes exp
-    (Lprim(Pmakeblock(0, Immutable, None),
+    (Lprim(Pmakeblock(0, Immutable, Default_share_immutable, None),
           [slot;
            Lconst(Const_block(0,
               [Const_base(Const_string (fname, exp.exp_loc, None));
@@ -318,14 +318,20 @@ and transl_exp0 ~in_new_scope ~scopes e =
                Matching.for_trywith ~scopes e.exp_loc (Lvar id)
                  (transl_cases_try ~scopes pat_expr_list))
   | Texp_tuple el ->
+      let share_immutable =
+        Translattribute.get_share_immutable_attribute e
+      in
       let ll, shape = transl_list_with_shape ~scopes el in
       begin try
         Lconst(Const_block(0, List.map extract_constant ll))
       with Not_constant ->
-        Lprim(Pmakeblock(0, Immutable, Some shape), ll,
+        Lprim(Pmakeblock(0, Immutable, share_immutable, Some shape), ll,
               (of_location ~scopes e.exp_loc))
       end
   | Texp_construct(_, cstr, args) ->
+      let share_immutable =
+        Translattribute.get_share_immutable_attribute e
+      in
       let ll, shape = transl_list_with_shape ~scopes args in
       if cstr.cstr_inlined <> None then begin match ll with
         | [x] -> x
@@ -339,7 +345,7 @@ and transl_exp0 ~in_new_scope ~scopes e =
           begin try
             Lconst(Const_block(n, List.map extract_constant ll))
           with Not_constant ->
-            Lprim(Pmakeblock(n, Immutable, Some shape), ll,
+            Lprim(Pmakeblock(n, Immutable, share_immutable, Some shape), ll,
                   of_location ~scopes e.exp_loc)
           end
       | Cstr_extension(path, is_const) ->
@@ -347,12 +353,15 @@ and transl_exp0 ~in_new_scope ~scopes e =
                       (of_location ~scopes e.exp_loc) e.exp_env path in
           if is_const then lam
           else
-            Lprim(Pmakeblock(0, Immutable, Some (Pgenval :: shape)),
+            Lprim(Pmakeblock(0, Immutable, share_immutable, Some (Pgenval :: shape)),
                   lam :: ll, of_location ~scopes e.exp_loc)
       end
   | Texp_extension_constructor (_, path) ->
       transl_extension_path (of_location ~scopes e.exp_loc) e.exp_env path
   | Texp_variant(l, arg) ->
+      let share_immutable =
+        Translattribute.get_share_immutable_attribute e
+      in
       let tag = Btype.hash_variant l in
       begin match arg with
         None -> Lconst(const_int tag)
@@ -362,13 +371,16 @@ and transl_exp0 ~in_new_scope ~scopes e =
             Lconst(Const_block(0, [const_int tag;
                                    extract_constant lam]))
           with Not_constant ->
-            Lprim(Pmakeblock(0, Immutable, None),
+            Lprim(Pmakeblock(0, Immutable, share_immutable, None),
                   [Lconst(const_int tag); lam],
                   of_location ~scopes e.exp_loc)
       end
   | Texp_record {fields; representation; extended_expression} ->
+      let share_immutable =
+        Translattribute.get_share_immutable_attribute e
+      in
       transl_record ~scopes e.exp_loc e.exp_env
-        fields representation extended_expression
+        fields representation extended_expression share_immutable
   | Texp_field(arg, _, lbl) ->
       let targ = transl_exp ~scopes arg in
       begin match lbl.lbl_repres with
@@ -567,7 +579,7 @@ and transl_exp0 ~in_new_scope ~scopes e =
           (* We don't need to wrap with Popaque: this forward
              block will never be shortcutted since it points to a float
              and Config.flat_float_array is true. *)
-          Lprim(Pmakeblock(Obj.forward_tag, Immutable, None),
+          Lprim(Pmakeblock(Obj.forward_tag, Immutable, Default_share_immutable, None),
                 [transl_exp ~scopes e], of_location ~scopes e.exp_loc)
       | `Identifier `Forward_value ->
          (* CR-someday mshinwell: Consider adding a new primitive
@@ -577,7 +589,7 @@ and transl_exp0 ~in_new_scope ~scopes e =
             block doesn't really match what is going on here.  This
             value may subsequently turn into an immediate... *)
          Lprim (Popaque,
-                [Lprim(Pmakeblock(Obj.forward_tag, Immutable, None),
+                [Lprim(Pmakeblock(Obj.forward_tag, Immutable, Default_share_immutable, None),
                        [transl_exp ~scopes e],
                        of_location ~scopes e.exp_loc)],
                 of_location ~scopes e.exp_loc)
@@ -591,7 +603,7 @@ and transl_exp0 ~in_new_scope ~scopes e =
                             ~attr:default_function_attribute
                             ~loc:(of_location ~scopes e.exp_loc)
                             ~body:(transl_exp ~scopes e) in
-          Lprim(Pmakeblock(Config.lazy_tag, Mutable, None), [fn],
+          Lprim(Pmakeblock(Config.lazy_tag, Mutable, Default_share_immutable, None), [fn],
                 of_location ~scopes e.exp_loc)
       end
   | Texp_object (cs, meths) ->
@@ -932,7 +944,7 @@ and transl_setinstvar ~scopes loc self var expr =
   Lprim(Psetfield_computed (maybe_pointer expr, Assignment),
     [self; var; transl_exp ~scopes expr], loc)
 
-and transl_record ~scopes loc env fields repres opt_init_expr =
+and transl_record ~scopes loc env fields repres opt_init_expr share_immutable =
   let size = Array.length fields in
   (* Determine if there are "enough" fields (only relevant if this is a
      functional-style record update *)
@@ -984,15 +996,15 @@ and transl_record ~scopes loc env fields repres opt_init_expr =
         let loc = of_location ~scopes loc in
         match repres with
           Record_regular ->
-            Lprim(Pmakeblock(0, mut, Some shape), ll, loc)
+            Lprim(Pmakeblock(0, mut, share_immutable, Some shape), ll, loc)
         | Record_inlined tag ->
-            Lprim(Pmakeblock(tag, mut, Some shape), ll, loc)
+            Lprim(Pmakeblock(tag, mut, share_immutable, Some shape), ll, loc)
         | Record_unboxed _ -> (match ll with [v] -> v | _ -> assert false)
         | Record_float ->
             Lprim(Pmakearray (Pfloatarray, mut), ll, loc)
         | Record_extension path ->
             let slot = transl_extension_path loc env path in
-            Lprim(Pmakeblock(0, mut, Some (Pgenval :: shape)), slot :: ll, loc)
+            Lprim(Pmakeblock(0, mut, share_immutable, Some (Pgenval :: shape)), slot :: ll, loc)
     in
     begin match opt_init_expr with
       None -> lam

@@ -69,6 +69,10 @@ val get_tailcall_attribute
    : Typedtree.expression
   -> Lambda.tailcall_attribute * Typedtree.expression
 
+val get_share_immutable_attribute 
+   : Typedtree.expression
+  -> Lambda.share_immutable_attribute
+
 val add_function_attributes
   : Lambda.lambda
   -> Location.t

@@ -192,6 +192,20 @@ let parse_poll_attribute attr =
         ]
         payload
 
+let parse_share_immutable_attribute attr =
+  match attr with
+  | None -> Default_share_immutable
+  | Some {Parsetree.attr_name = {txt; loc}; attr_payload = payload} ->
+      parse_id_payload txt loc
+        ~default:Default_share_immutable
+        ~empty:Always_share_immutable
+        [
+          "never", Default_share_immutable;
+          "always", Always_share_immutable;
+          "hint", Hint_share_immutable;
+        ]
+        payload
+
 let get_inline_attribute l =
   let attr, _ = find_attribute is_inline_attribute l in
   parse_inline_attribute attr
@@ -397,6 +411,16 @@ let get_tailcall_attribute e =
             Default_tailcall
       in
       tailcall_attribute, { e with exp_attributes = other_attributes }
+
+let get_share_immutable_attribute e =
+  let is_share_immutable_attribute = function
+    | {txt=("share")} -> true
+    | _ -> false
+  in
+  let attr, _ =
+    find_attribute is_share_immutable_attribute e.exp_attributes
+  in
+  parse_share_immutable_attribute attr
 
 let check_attribute e {Parsetree.attr_name = { txt; loc }; _} =
   match txt with

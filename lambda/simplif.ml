@@ -234,8 +234,8 @@ let simplify_exits lam =
         (* Simplify Obj.with_tag *)
       | Pccall { Primitive.prim_name = "caml_obj_with_tag"; _ },
         [Lconst (Const_base (Const_int tag));
-         Lprim (Pmakeblock (_, mut, shape), fields, loc)] ->
-         Lprim (Pmakeblock(tag, mut, shape), fields, loc)
+         Lprim (Pmakeblock (_, mut, share_immut, shape), fields, loc)] ->
+         Lprim (Pmakeblock(tag, mut, share_immut, shape), fields, loc)
       | Pccall { Primitive.prim_name = "caml_obj_with_tag"; _ },
         [Lconst (Const_base (Const_int tag));
          Lconst (Const_block (_, fields))] ->
@@ -528,7 +528,7 @@ let simplify_lets lam =
       Hashtbl.add subst v (simplif (Lvar w));
       simplif l2
   | Llet(Strict, kind, v,
-         Lprim(Pmakeblock(0, Mutable, kind_ref) as prim, [linit], loc), lbody)
+         Lprim(Pmakeblock(0, Mutable, _, kind_ref) as prim, [linit], loc), lbody)
     when optimize ->
       let slinit = simplif linit in
       let slbody = simplif lbody in
@@ -912,6 +912,11 @@ let reuse_ctx_add ctx var tag =
         ctx.known_var_with_tag }
 
 let reuse_immutable_block lam =
+  let warn_always loc = function
+    | Hint_share_immutable | Default_share_immutable -> ()
+    | Always_share_immutable ->
+      Location.prerr_warning (to_location loc) (Warnings.Share_immutable_block_failed)
+  in
   let rec reuse lam ~ctx =
     match lam with
     | Lvar _ | Lmutvar _ | Lconst _ -> lam
@@ -934,13 +939,19 @@ let reuse_immutable_block lam =
                 v is a variable with a known tag to be the same as id
       if args is [], then we just choose the last variable with the same id in the ctx
     *)
-    | Lprim (Pmakeblock (id, Immutable, _shape), [], _loc) ->
+    | Lprim (Pmakeblock (id, Immutable, (Hint_share_immutable | Always_share_immutable as si), _shape), [], loc) ->
       begin match Int.Map.find_opt id ctx.known_var_with_tag with
         | Some (hd :: _) -> Lvar hd
-        | _ -> lam
+        | _ ->
+          warn_always loc si;
+          lam
       end
-    | Lprim (Pmakeblock (id, Immutable, _shape), 
-             (Lprim ((Pfield (0, Immutable)), [Lvar v], _loc)) :: xs, _loc2) ->
+    | Lprim (Pmakeblock (id, Immutable, (Hint_share_immutable | Always_share_immutable as si), _shape) as prim, 
+             ((Lprim ((Pfield (0, Immutable)), [Lvar v], _loc)) :: xs as args), loc) ->
+      let failed () =
+        warn_always loc si;
+        Lprim (prim, List.map (reuse ~ctx) args, loc)
+      in
       begin match Ident.Map.find_opt v ctx.known_tag_of_var with
         | Some tag when tag = id ->
           let arg_cond (flag, i) arg =
@@ -950,9 +961,13 @@ let reuse_immutable_block lam =
             | _ -> (false, i + 1)
           in
           let (args_satified, _) = List.fold_left arg_cond (true, 1) xs in
-          if args_satified then Lvar v else lam
-        | _ -> lam
+          if args_satified then Lvar v
+          else failed ()
+        | _ -> failed ()
       end
+    | Lprim (Pmakeblock (_, _, si, _shape) as prim, args, loc) ->
+      warn_always loc si;
+      Lprim (prim, List.map (reuse ~ctx) args, loc)
     | Lprim (prim, args, loc) ->
       Lprim (prim, List.map (reuse ~ctx) args, loc)
     | Lswitch (Lvar v, sw, loc) ->
