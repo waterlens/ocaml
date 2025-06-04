@@ -45,6 +45,10 @@ type is_safe =
   | Safe
   | Unsafe
 
+type share_immutable_attribute =
+  | Always_share_immutable (* [@share] or [@share always] *)
+  | Default_share_immutable (* [@share never] or no [@share] attribute *)
+
 type primitive =
   | Pbytes_to_string
   | Pbytes_of_string
@@ -53,8 +57,8 @@ type primitive =
   | Pgetglobal of Ident.t
   | Psetglobal of Ident.t
   (* Operations on heap blocks *)
-  | Pmakeblock of int * mutable_flag * block_shape
-  | Pfield of int
+  | Pmakeblock of int * mutable_flag * share_immutable_attribute * block_shape
+  | Pfield of int * mutable_flag
   | Pfield_computed
   | Psetfield of int * immediate_or_pointer * initialization_or_assignment
   | Psetfield_computed of immediate_or_pointer * initialization_or_assignment
